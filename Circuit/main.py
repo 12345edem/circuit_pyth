@@ -1,0 +1,87 @@
+from PIL import Image, ImageDraw, ImageFont
+import text_to_image
+
+#Functions
+def changeSize(image, width, height, new_size_X, new_size_Y):
+	width *= new_size_X
+	width = int(width)
+	height *= new_size_Y
+	height = int(height)
+	resized_image = image.resize((width, height))
+	resized_image.save('resized.jpg')
+	return (resized_image, width, height)
+
+def numeration(pixels, width, height):
+	all_pixels = []
+	for i in range(width):
+		for j in range(height):
+			one_pixel = pixels[i, j]
+			all_pixels.append(one_pixel)
+	return all_pixels
+
+
+#Tools
+image = Image.open('image.jpg').convert('RGB')
+width = image.size[0]
+height = image.size[1]
+fnt = ImageFont.truetype('8291.ttf', 10) 
+#Algorithm
+print('Введите количество цветов: ')
+quan = int(input())
+print('Введите ширину конечной картины: ')
+sizex = int(input())
+print('Введите высоту конечной картины: ')
+sizey = int(input())
+
+
+resized_image, new_width, new_height = changeSize(image, width, height, sizex/width, sizey/height)
+pixels = resized_image.load()#не двумерный массив
+
+result = resized_image
+quantized = result.quantize(quan)#квантование изображения = уеньшение кол - ва цветов
+
+r_pixels = quantized.load()
+all_pixels = numeration(r_pixels, new_width, new_height)
+#print(len(all_pixels))#количество всех пикселей
+#print(len(set(all_pixels)))#количство цветов в палетке
+colors = set(all_pixels)
+
+#CAWABUNGA
+quantized.save('quantized.png')
+indexed = Image.open('quantized.png')
+i_pixels = indexed.load()
+indexed.palette.save('palette.txt')#сохраняет в текстовый файл набор цветов по номерам
+#drawing
+result = Image.new('RGB', (4500, 4500), (255, 255, 255))
+draw = ImageDraw.Draw(result)
+#Печатает схему в верной ориентации
+low_border = 0
+for i in range(new_width):
+	for j in range(new_height):
+		draw.text((i * 16, j * 16), str(i_pixels[i, j]),font = fnt,  fill = (0, 0, 0))
+	print(i , '/' , new_width)
+	low_border = (i * 16)
+#Рисуем палетку
+low_border -= 1000
+index = '0'
+color = (0, 0, 0)
+f = open('palette.txt')
+fnt = ImageFont.truetype('8291.ttf', 40) 
+lines = f.readlines()
+for i in range(2, len(colors) + 2):
+	lines[i] = lines[i].split()
+	index = lines[i][0]
+	color = tuple([int(lines[i][1]), int(lines[i][2]), int(lines[i][3])])
+	draw.rectangle([(i * 16 * 4, low_border + 40), (i * 16 * 4 + 80, low_border + 180)], fill = color, outline = None)
+	draw.text((i * 16 * 4 + 15, low_border + 250), index, font = fnt, fill = (0, 0, 0))
+	print(i , '/', len(colors))
+
+
+result.save('result.jpg')
+
+#f = open('scheme.txt', 'w')
+#for i in range(new_width):
+#	for j in range(new_height):
+		#f.write(str(i_pixels[i , j]) + '\t')
+#f.write(str(i_pixels))
+#f.close()
